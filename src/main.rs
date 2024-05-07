@@ -1,5 +1,8 @@
 // Uncomment this block to pass the first stage
-use std::{io::Write, net::TcpListener};
+use std::{
+    io::{Read, Write},
+    net::TcpListener,
+};
 
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -13,10 +16,18 @@ fn main() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
-                // let mut buf=[]
-                _stream
-                    .write(b"+PONG\r\n")
-                    .expect("failed to write to stream");
+                let mut buf = [0; 512];
+                loop {
+                    let r_c = _stream.read(&mut buf).unwrap();
+                    if r_c == 0 {
+                        break;
+                    }
+                    println!("Size is {:?}", r_c);
+
+                    _stream
+                        .write(b"+PONG\r\n")
+                        .expect("failed to write to stream");
+                }
             }
             Err(e) => {
                 println!("error: {}", e);
