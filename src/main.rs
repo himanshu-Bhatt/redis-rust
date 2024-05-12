@@ -2,6 +2,7 @@
 use std::{
     io::{Read, Write},
     net::TcpListener,
+    thread,
 };
 
 fn main() {
@@ -16,18 +17,32 @@ fn main() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
-                let mut buf = [0; 512];
-                loop {
-                    let r_c = _stream.read(&mut buf).unwrap();
-                    if r_c == 0 {
-                        break;
-                    }
-                    // println!("Size is {:?}", r_c);
+                thread::spawn(move || {
+                    let mut buf = [0; 512];
+                    loop {
+                        let r_c = _stream.read(&mut buf).unwrap();
+                        if r_c == 0 {
+                            break;
+                        }
+                        let mut buf = [0; 512];
+                        loop {
+                            let r_c = _stream.read(&mut buf).unwrap();
+                            if r_c == 0 {
+                                break;
+                            }
+                            // println!("Size is {:?}", r_c);
 
-                    _stream
-                        .write(b"+PONG\r\n")
-                        .expect("failed to write to stream");
-                }
+                            _stream
+                                .write(b"+PONG\r\n")
+                                .expect("failed to write to stream");
+                        }
+                        // println!("Size is {:?}", r_c);
+
+                        _stream
+                            .write(b"+PONG\r\n")
+                            .expect("failed to write to stream");
+                    }
+                });
             }
             Err(e) => {
                 println!("error: {}", e);
