@@ -24,20 +24,7 @@ fn main() {
                         if r_c == 0 {
                             break;
                         }
-                        let mut buf = [0; 512];
-                        loop {
-                            let r_c = _stream.read(&mut buf).unwrap();
-                            if r_c == 0 {
-                                break;
-                            }
-                            // println!("Size is {:?}", r_c);
-
-                            _stream
-                                .write(b"+PONG\r\n")
-                                .expect("failed to write to stream");
-                        }
-                        // println!("Size is {:?}", r_c);
-
+                       
                         _stream
                             .write(b"+PONG\r\n")
                             .expect("failed to write to stream");
