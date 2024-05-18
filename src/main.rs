@@ -8,8 +8,8 @@ use std::{
     thread,
 };
 
+use redis::ToRedisArgs;
 use redis::Value;
-use redis::{ToRedisArgs};
 
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -34,8 +34,12 @@ fn main() {
 }
 fn handle_conn(stream: &mut TcpStream) {
     let mut temp_buf = [0; 512];
-    match stream.read(&mut temp_buf) {
-        Ok(_) => {
+
+    loop {
+        if let Ok(r_c) = stream.read(&mut temp_buf) {
+            if r_c == 0 {
+                break;
+            }
             if let Ok(v) = redis::parse_redis_value(&temp_buf) {
                 let mut comms = Vec::new();
                 match v {
@@ -55,22 +59,26 @@ fn handle_conn(stream: &mut TcpStream) {
                 if comms[0] == "PING" {
                     stream.write(b"+PONG\r\n");
                 } else if comms[0] == "ECHO" {
-                  let echo_this=  comms.iter().skip(1).map(|word|word.as_ref()).collect::<Vec<&str>>().join(" ");
-                    let resp_en=to_resp_string(echo_this);
+                    let echo_this = comms
+                        .iter()
+                        .skip(1)
+                        .map(|word| word.as_ref())
+                        .collect::<Vec<&str>>()
+                        .join(" ");
+                    let resp_en = to_resp_string(echo_this);
                     stream.write(resp_en.as_bytes());
                 }
             } else {
                 println!("Error while parsing");
             }
-        }
-        Err(e) => {
-            println!("{:?}", e);
+        } else {
+            println!("Could not read from tcp connection");
         }
     }
 }
 fn to_resp_string<T: ToRedisArgs>(value: T) -> String {
     let args = value.to_redis_args();
-    println!("{:?}",args);
+    println!("{:?}", args);
     let mut resp = String::new();
     for arg in args {
         resp.push_str(&format!("${}\r\n", arg.len()));
