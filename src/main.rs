@@ -2,9 +2,11 @@
 // use resp::Value;
 // use resp::Value::Bulk;
 use std::{
+    collections::HashMap,
     env,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    sync::{Arc, Mutex},
     thread,
 };
 
@@ -18,12 +20,14 @@ fn main() {
     // Uncomment this block to pass the first stage
     //
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    let mut map = Arc::new(Mutex::new(HashMap::new()));
     for stream in listener.incoming() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
+                let _map = Arc::clone(&map);
                 thread::spawn(move || {
-                    handle_conn(&mut _stream);
+                    handle_conn(&mut _stream, _map);
                 });
             }
             Err(e) => {
@@ -32,7 +36,7 @@ fn main() {
         }
     }
 }
-fn handle_conn(stream: &mut TcpStream) {
+fn handle_conn(stream: &mut TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
     let mut temp_buf = [0; 512];
 
     loop {
@@ -47,7 +51,7 @@ fn handle_conn(stream: &mut TcpStream) {
                         for item in items {
                             if let Value::Data(ref data) = item {
                                 let st = String::from_utf8_lossy(data);
-                                println!("{}", st);
+                                // println!("{}", st);
                                 comms.push(st);
                             } else {
                                 println!("Unexpected item in bulk response");
@@ -56,6 +60,7 @@ fn handle_conn(stream: &mut TcpStream) {
                     }
                     _ => println!("Unexpected response type"),
                 }
+
                 if comms[0] == "PING" {
                     stream.write(b"+PONG\r\n");
                 } else if comms[0] == "ECHO" {
@@ -67,6 +72,21 @@ fn handle_conn(stream: &mut TcpStream) {
                         .join(" ");
                     let resp_en = to_resp_string(echo_this);
                     stream.write(resp_en.as_bytes());
+                } else if comms[0] == "SET" {
+                    let k = comms[1].to_string();
+                    let v = comms[2].to_string();
+                    let mut map = map.lock().unwrap();
+                    map.insert(k, v);
+                    stream.write(b"+OK\r\n");
+                } else if comms[0] == "GET" {
+                     let map = map.lock().unwrap();
+                    let k = comms[1].as_ref();
+                    if let Some(res) = map.get(k) {
+                        let v = format!("${}\r\n{}\r\n", res.len(), res.to_string());
+                        stream.write(v.as_bytes());
+                    } else {
+                        stream.write(b"-1\r\n");
+                    }
                 }
             } else {
                 println!("Error while parsing");
