@@ -70,7 +70,6 @@ async fn handle_conn(stream: &mut TcpStream, map: Arc<Mutex<HashMap<String, Stri
                         }
                     }
                     "SET" => {
-                        println!("Hello");
                         if comms.len() == 3 {
                             let k = comms[1].to_string();
                             let v = comms[2].to_string();
@@ -124,7 +123,6 @@ async fn handle_conn(stream: &mut TcpStream, map: Arc<Mutex<HashMap<String, Stri
     }
 }
 async fn delete_key(k: String, map: Arc<Mutex<HashMap<String, String>>>, ts: u64) {
-    println!("Hello");
     sleep(Duration::from_millis(ts)).await;
     let k = &k[..];
 
