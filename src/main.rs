@@ -1,3 +1,4 @@
+use clap::Parser;
 use redis::Value;
 use std::{
     collections::HashMap,
@@ -7,9 +8,19 @@ use std::{
 };
 use tokio::time::{sleep, Duration};
 
+/// This is my program
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Sets a custom port
+    #[clap(long, default_value_t = 6379, value_parser = clap::value_parser!(u32))]
+    port: u32,
+}
+
 #[tokio::main]
 async fn main() {
-    let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    let args = Args::parse();
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", args.port)).unwrap();
     let map = Arc::new(Mutex::new(HashMap::new()));
     for stream in listener.incoming() {
         match stream {
